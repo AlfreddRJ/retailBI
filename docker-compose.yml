@@ -1,0 +1,60 @@
+services:
+  pos_db:
+    image: postgres:15-alpine
+    container_name: retailbi_pos_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POS_DB_USER}
+      POSTGRES_PASSWORD: ${POS_DB_PASSWORD}
+      POSTGRES_DB: ${POS_DB_NAME}
+    ports:
+      - "${POS_DB_PORT}:5432"
+    volumes:
+      - pos_db_data:/var/lib/postgresql/data
+      - ./pos_simulator/init_pos_db.sql:/docker-entrypoint-initdb.d/init_pos_db.sql
+    networks:
+      - retailbi_net
+
+  prefect_server:
+    build: .
+    container_name: retailbi_prefect_server
+    restart: unless-stopped
+    command: prefect server start --host 0.0.0.0
+    ports:
+      - "4200:4200"
+    volumes:
+      - prefect_data:/root/.prefect
+    networks:
+      - retailbi_net
+
+  retailbi_etl:
+    build: .
+    container_name: retailbi_etl_worker
+    restart: unless-stopped
+    depends_on:
+      - pos_db
+      - prefect_server
+    environment:
+      POS_DB_USER: ${POS_DB_USER}
+      POS_DB_PASSWORD: ${POS_DB_PASSWORD}
+      POS_DB_NAME: ${POS_DB_NAME}
+      POS_DB_HOST: pos_db
+      POS_DB_PORT: 5432
+      GCP_PROJECT_ID: ${GCP_PROJECT_ID}
+      BQ_DATASET_NAME: ${BQ_DATASET_NAME}
+      GOOGLE_APPLICATION_CREDENTIALS: /app/credentials/gcp_service_account.json
+      PREFECT_API_URL: http://prefect_server:4200/api
+    volumes:
+      - ./src:/app/src
+      - ./credentials:/app/credentials
+    command: sh -c "sleep 10 && python src/main_flow.py --serve"
+    networks:
+      - retailbi_net
+
+volumes:
+  pos_db_data:
+  prefect_data:
+
+networks:
+  retailbi_net:
+    driver: bridge

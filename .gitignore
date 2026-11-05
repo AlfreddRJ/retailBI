@@ -1,0 +1,8 @@
+.env
+__pycache__/
+*.pyc
+credentials/*.json
+venv/
+.venv/
+src/.last_sync.txt
+src/fallback_storage/

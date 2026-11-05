@@ -1,0 +1,11 @@
+sqlalchemy
+psycopg2-binary
+python-dotenv
+pandas
+pyarrow
+db-dtypes
+cryptography
+google-cloud-bigquery
+google-cloud-bigquery-storage
+pandas-gbq
+prefect
